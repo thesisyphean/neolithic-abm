@@ -1,39 +1,18 @@
-use std::cmp;
+use crate::household::Household;
 
-struct Settlement {
-    households: Vec<Household>,
+pub struct Settlement {
+    // TODO - implement this as an iterator
+    pub households: Vec<Household>,
 }
 
-struct Household {
-    storage: f64,
-    resource_patch: bool,
-    load: f64,
+impl Settlement {
+    pub fn new(initial_households: usize) -> Self {
+        let households = (0..initial_households)
+            .map(|_| Household::default())
+            .collect();
 
-    peer_transfer: f64,
-    subordinate_transfer: f64,
-    conformity: f64,
-    attachment: f64,
-}
-
-impl Household {
-    fn new() -> Self {
+        Settlement {
+            households,
+        }
     }
-
-    fn status(&self) -> f64 {
-        self.resources + self.load
-    }
-
-    fn is_peer(&self, other: Self) -> bool {
-        (other.status() - self.status()).abs() /
-            cmp::max(self.status(), other.status()) <= L
-    }
-
-    fn is_auth(&self, other: Self) -> bool {
-        (other.status() - self.status()) /
-            cmp::max(self.status(), other.status()) > L
-    }
-
-    // TODO: These require random numbers...
-    fn birth(&self) -> bool { false }
-    fn death(&self) -> bool { false }
 }
