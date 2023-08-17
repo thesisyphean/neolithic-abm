@@ -1,3 +1,8 @@
+#![feature(drain_filter)]
+
+// TODO -
+// Environmental Stress
+
 mod world;
 mod settlement;
 mod household;
@@ -8,6 +13,9 @@ use crate::world::{World, Settings};
 const birth_rate: f64 = 0.1;
 const death_rate: f64 = 0.1;
 const L: f64 = 0.6;
+const years_per_move: u32 = 100;
+const beta: f64 = 1.5;
+const m: f64 = 0.005;
 
 fn main() {
     println!("Hello, Neo!");

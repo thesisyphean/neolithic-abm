@@ -1,75 +1,130 @@
-use crate::L;
+use crate::{L, years_per_move};
 use crate::world::Index;
-use std::cmp;
 
 pub struct Household {
-    resources: f64,
-    resource_patch: Option<Index>,
-    load: f64,
+    pub id: u32,
+    pub resources: f64,
+    pub hunger: f64,
+    pub resource_patch: Option<Index>,
+    pub load: f64,
     genes: Genes,
+    years_since_move: u32,
+    satisfaction: f64,
 }
 
 impl Household {
-    pub fn new(genes: Genes) -> Self {
+    pub fn new(id: u32, genes: Genes) -> Self {
         Household {
+            id,
             resources: 0.0,
+            hunger: 0.0,
             resource_patch: None,
             load: 0.0,
             genes,
+            years_since_move: 0,
+            satisfaction: 0.0,
         }
     }
 
-    pub fn birth_new(&mut self, other: Self) -> Self {
-        // resources is split between parent and child
+    pub fn consume(&mut self, resources: f64) -> Option<f64> {
+        self.resources += resources;
+
+        if self.resources > 0.5 {
+            self.resources -= 0.5;
+            None
+        } else {
+            let result = Some(self.resources);
+            self.resources = 0.0;
+            result
+        }
+    }
+
+    pub fn query_donation(&mut self, required: f64, query_type: QueryType,
+        chance: f64) -> bool {
+        // don't have the resources to donate
+        if required > self.resources {
+            return false;
+        }
+
+        let donating = match query_type {
+            QueryType::Superior => true,
+            QueryType::Peer => chance < self.genes.peer_transfer,
+            QueryType::Subordinate => chance < self.genes.subordinate_transfer,
+        };
+
+        if donating {
+            self.resources -= required;
+        }
+        donating
+    }
+
+    pub fn birth_new(&mut self, other: Self, id: u32) -> Self {
+        // resources are split between parent and child
         self.resources /= 2.0;
 
         Household {
+            id,
             resources: self.resources,
+            hunger: 0.0,
             resource_patch: None,
             load: 0.0,
-            genes: self.genes.combine(&other.genes),
+            genes: self.genes.combine(other.genes),
+            years_since_move: 0,
+            satisfaction: 0.0,
         }
     }
 
-    fn status(&self) -> f64 {
+    pub fn status(&self) -> f64 {
         self.resources + self.load
     }
 
-    fn is_peer(&self, other: &Self) -> bool {
-        (other.status() - self.status()).abs() /
-            cmp::max_by(self.status(), other.status(), f64::total_cmp)
+    pub fn is_peer(&self, other_status: f64) -> bool {
+        (other_status - self.status()).abs() /
+            f64::max(self.status(), other_status)
             <= L
     }
 
-    fn is_auth(&self, other: &Self) -> bool {
-        (other.status() - self.status()) /
-            cmp::max_by(self.status(), other.status(), f64::total_cmp)
+    pub fn is_auth(&self, other_status: f64) -> bool {
+        (other_status - self.status()) /
+            f64::max(self.status(), other_status)
             > L
     }
 
-    fn is_sub(&self, other: &Self) -> bool {
-        other.is_auth(self)
+    pub fn is_sub(&self, other_status: f64) -> bool {
+        (self.status() - other_status) /
+            f64::max(other_status, self.status())
+            > L
     }
 
-    fn hunger(&self) -> f64 {
-        cmp::min_by(self.resources / 0.5, 1.0, f64::total_cmp)
+    pub fn birth(&self, chance: f64) -> bool {
+        chance < self.hunger * crate::birth_rate
     }
 
-    fn birth(&self, chance: f64) -> bool {
-        chance < self.hunger() * crate::birth_rate
+    pub fn death(&self, chance: f64) -> bool {
+        chance * crate::death_rate < self.hunger 
     }
 
-    fn death(&self, chance: f64) -> bool {
-        chance * crate::death_rate < self.hunger()
+    pub fn update_satisfaction(&mut self, consumed: f64) {
+        self.satisfaction *= self.years_since_move as f64;
+        self.satisfaction += consumed;
+
+        self.years_since_move += 1;
+        self.satisfaction /= self.years_since_move as f64;
+    }
+
+    pub fn movement(&self, chance: f64) -> bool {
+        2.0 * self.genes.attachment * self.satisfaction
+            < chance
+    }
+
+    fn migrate(&mut self) {
+        if self.years_since_move >= years_per_move {
+            //
+        }
     }
 }
 
-impl Default for Household {
-    fn default() -> Self {
-        Household::new(Genes::default())
-    }
-}
-
+#[derive(Clone, Copy)]
 pub struct Genes {
     peer_transfer: f64,
     subordinate_transfer: f64,
@@ -96,7 +151,7 @@ impl Genes {
         Genes::new(0.0, 0.0, conformity, attachment)
     }
 
-    fn combine(&self, other: &Self) -> Self {
+    fn combine(&self, other: Self) -> Self {
         // TODO - uniform crossover and random mutation
         Self::default()
     }
@@ -106,4 +161,10 @@ impl Default for Genes {
     fn default() -> Self {
         Self::new(0.5, 0.5, 0.5, 0.5)
     }
+}
+
+pub enum QueryType {
+    Superior,
+    Peer,
+    Subordinate,
 }
