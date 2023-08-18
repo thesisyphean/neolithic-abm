@@ -18,8 +18,6 @@ const beta: f64 = 1.5;
 const m: f64 = 0.005;
 
 fn main() {
-    println!("Hello, Neo!");
-
     let settings = Settings {
         size: 100,
         initial_settlements: 3,
@@ -28,4 +26,6 @@ fn main() {
 
     let mut world = World::new(settings);
     world.iterate();
+
+    println!("{}", world.count_settlements());
 }

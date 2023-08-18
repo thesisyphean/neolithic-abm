@@ -122,38 +122,51 @@ impl World {
 
     // we know that an agent's hunger has been set
     fn iterate_birth(&mut self) {
-        for settlement in &mut self.settlements {
-            let mut to_add = Vec::new();
+        let mut births: Vec<_> = (0..self.settlements.len())
+            .map(|_| Vec::new())
+            .collect();
 
-            for household in &mut settlement.households {
+        for (n, settlement) in self.settlements.iter().enumerate() {
+            let total_statuses = self.settlements.iter()
+                .filter(|s| settlement.influence(s) > 0.0)
+                .map(|s| s.status())
+                .sum::<f64>() as u32;
+
+            for household in &settlement.households {
                 if household.birth(self.rng.gen()) {
-                    // the household has reproduced
-                    // we need to find the other household
+                    // we choose another partner from the possible options
+                    let mut chosen = (self.rng.next_u32() % total_statuses) as f64;
+                    let mut genes = household.genes;
 
-                    
+                    for s in &self.settlements {
+                        if settlement.influence(s) <= 0.0 { continue; }
 
-                    // let new_household = household.birth_new();
+                        if chosen <= settlement.status() {
+                            genes = settlement.find_genes(chosen);
+                            break;
+                        }
 
-                    to_add.push(new_household);
+                        chosen -= settlement.status();
+                    }
+
+                    births[n].push((household.id, genes));
                 }
             }
+        }
 
-            for new_household in to_add {
-                settlement.households.push(new_household);
+        for (n, settlement_births) in births.into_iter().enumerate() {
+            for (id, genes) in settlement_births {
+                self.settlements[n].add(id, genes);
             }
         }
     }
 
     fn iterate_death(&mut self) {
-        for settlement in self.settlements {
-            let mut to_remove = Vec::new();
-
-            for household in &mut settlement.households {
-                if household.death(self.rng.gen()) {
-                    // the household has died
-                    to_remove.push(household.id);
-                }
-            }
+        for settlement in &mut self.settlements {
+            let to_remove: Vec<_> = settlement.households.iter()
+                .filter(|h| h.death(self.rng.gen()))
+                .map(|h| h.id)
+                .collect();
 
             let removed = settlement.households.drain_filter(|h|
                 to_remove.contains(&h.id));
@@ -209,6 +222,10 @@ impl World {
 
         None
     }
+
+    pub fn count_settlements(&self) -> usize {
+        self.settlements.len()
+    }
 }
 
 enum Cell {
@@ -236,7 +253,7 @@ impl Index {
 
     pub fn dist(&self, other: Self) -> f64 {
         let s = self.as_isize();
-        let o = self.as_isize();
+        let o = other.as_isize();
 
         let x = (s.0 - o.0).pow(2) as f64;
         let y = (s.1 - o.1).pow(2) as f64;

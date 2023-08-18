@@ -7,7 +7,7 @@ pub struct Household {
     pub hunger: f64,
     pub resource_patch: Option<Index>,
     pub load: f64,
-    genes: Genes,
+    pub genes: Genes,
     years_since_move: u32,
     satisfaction: f64,
 }
@@ -58,7 +58,7 @@ impl Household {
         donating
     }
 
-    pub fn birth_new(&mut self, other: Self, id: u32) -> Self {
+    pub fn birth_new(&mut self, genes: Genes, id: u32) -> Self {
         // resources are split between parent and child
         self.resources /= 2.0;
 
@@ -68,7 +68,7 @@ impl Household {
             hunger: 0.0,
             resource_patch: None,
             load: 0.0,
-            genes: self.genes.combine(other.genes),
+            genes: self.genes.combine(genes),
             years_since_move: 0,
             satisfaction: 0.0,
         }
@@ -121,6 +121,10 @@ impl Household {
         if self.years_since_move >= years_per_move {
             //
         }
+    }
+
+    fn degrade_resources(&mut self, delta: f64, degradation: f64) {
+        self.resources *= 1.0 - delta * degradation;
     }
 }
 

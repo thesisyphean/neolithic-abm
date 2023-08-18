@@ -86,7 +86,27 @@ impl Settlement {
         self.households.swap_remove(i)
     }
 
-    pub fn add(&mut self, household: Household) {
-        self.households.push(household);
+    pub fn add(&mut self, id: u32, genes: Genes) {
+        let i = self.households.iter()
+            .position(|h| h.id == id)
+            .unwrap();
+        let household = self.households[i];
+
+        let new_household = household.birth_new(genes,
+            self.households.len() as u32);
+
+        self.households.push(new_household);
+    }
+
+    pub fn find_genes(&self, mut status: f64) -> Genes {
+        for household in &self.households {
+            if status <= household.load {
+                return household.genes;
+            }
+
+            status -= household.load;
+        }
+
+        self.households[0].genes
     }
 }
