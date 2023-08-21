@@ -90,10 +90,9 @@ impl Settlement {
         let i = self.households.iter()
             .position(|h| h.id == id)
             .unwrap();
-        let household = self.households[i];
 
-        let new_household = household.birth_new(genes,
-            self.households.len() as u32);
+        let new_id = self.households.len() as u32;
+        let new_household = self.households[i].birth_new(genes, new_id);
 
         self.households.push(new_household);
     }
@@ -108,5 +107,9 @@ impl Settlement {
         }
 
         self.households[0].genes
+    }
+
+    pub fn population(&self) -> usize {
+        self.households.len()
     }
 }

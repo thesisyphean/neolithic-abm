@@ -27,5 +27,6 @@ fn main() {
     let mut world = World::new(settings);
     world.iterate();
 
-    println!("{}", world.count_settlements());
+    println!("Settlements: {}", world.count_settlements());
+    println!("Population: {}", world.count_population());
 }

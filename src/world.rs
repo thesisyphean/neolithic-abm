@@ -72,29 +72,37 @@ impl World {
         self.iterate_death();
 
         // agents migrate based on their satisfaction
-        self.iterate_migration();
+        // self.iterate_migration();
 
         self.iteration += 1;
     }
 
     fn iterate_settlement(&mut self) {
-        for settlement in &mut self.settlements {
-            for household in &mut settlement.households {
-                if household.resource_patch.is_none() {
-                    let unclaimed_patch = self.find_unclaimed_patch(settlement.position,
-                        settlement.id);
+        let mut to_search: Vec<_> = (0..self.settlements.len())
+            .map(|_| Vec::new())
+            .collect();
 
-                    if unclaimed_patch.is_none() {
-                        // if an agent fails to find a new patch, there isn't one
-                        break;
-                    } else {
-                        // give the agent the resource patch and mark it as claimed
-                        household.resource_patch = unclaimed_patch;
-                        let pos = unclaimed_patch.unwrap();
-                        // this is necessary so agents don't leave their settlement's territory
-                        self.matrix[pos.0][pos.1] = Cell::Claimed(settlement.id);
-                    }
+        for (n, settlement) in self.settlements.iter_mut().enumerate() {
+            for (i, household) in settlement.households.iter_mut().enumerate() {
+                if household.resource_patch.is_none() {
+                    to_search[n].push(i);
                 }
+            }
+        }
+
+        for (n, searches) in to_search.iter().enumerate() {
+            for &i in searches {
+                let id = self.settlements[n].id;
+
+                let unclaimed_patch = self.find_unclaimed_patch(self.settlements[n].position, id);
+
+                if unclaimed_patch.is_none() {
+                    break;
+                }
+
+                self.settlements[n].households[i].resource_patch = unclaimed_patch;
+                let pos = unclaimed_patch.unwrap();
+                self.matrix[pos.0][pos.1] = Cell::Claimed(id);
             }
         }
     }
@@ -135,21 +143,25 @@ impl World {
             for household in &settlement.households {
                 if household.birth(self.rng.gen()) {
                     // we choose another partner from the possible options
-                    let mut chosen = (self.rng.next_u32() % total_statuses) as f64;
-                    let mut genes = household.genes;
+                    if total_statuses == 0 {
+                        births[n].push((household.id, household.genes));
+                    } else {
+                        let mut chosen = (self.rng.next_u32() % total_statuses) as f64;
+                        let mut genes = household.genes;
 
-                    for s in &self.settlements {
-                        if settlement.influence(s) <= 0.0 { continue; }
+                        for s in &self.settlements {
+                            if settlement.influence(s) <= 0.0 { continue; }
 
-                        if chosen <= settlement.status() {
-                            genes = settlement.find_genes(chosen);
-                            break;
+                            if chosen <= settlement.status() {
+                                genes = settlement.find_genes(chosen);
+                                break;
+                            }
+
+                            chosen -= settlement.status();
                         }
 
-                        chosen -= settlement.status();
+                        births[n].push((household.id, genes));
                     }
-
-                    births[n].push((household.id, genes));
                 }
             }
         }
@@ -185,7 +197,7 @@ impl World {
 
     pub fn resources(iteration: u32) -> f64 {
         // TODO
-        0.5
+        0.8
     }
 
     // this is a simple grid traversal algorithm
@@ -226,6 +238,12 @@ impl World {
     pub fn count_settlements(&self) -> usize {
         self.settlements.len()
     }
+
+    pub fn count_population(&self) -> usize {
+        self.settlements.iter()
+            .map(|s| s.population())
+            .sum()
+    } 
 }
 
 enum Cell {
