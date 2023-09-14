@@ -1,4 +1,4 @@
-use crate::settlement::{Settlement};
+use crate::settlement::Settlement;
 use rand::{rngs::ThreadRng, Rng, RngCore};
 use std::collections::VecDeque;
 
@@ -14,7 +14,7 @@ impl World {
     pub fn new(settings: Settings) -> Self {
         let cells = settings.size * settings.size;
 
-        // create the matrix
+        // create the matrix with all unclaimed cells
         let mut matrix: Vec<Vec<_>> = (0..settings.size)
             .map(|_| (0..settings.size)
                 .map(|_| Cell::Unclaimed)
@@ -27,6 +27,7 @@ impl World {
 
         // assert initial_settlements <= cells?
         // spawn the initial settlements
+        // TODO: this is bullshit
         for n in 0..settings.initial_settlements {
             let mut new_index = rng.next_u32() as usize % (cells - n) + 1;
 
@@ -78,12 +79,15 @@ impl World {
     }
 
     fn iterate_settlement(&mut self) {
+        // each vector holds the indices of the households in that settlement
+        //   that don't have a resource patch
         let mut to_search: Vec<_> = (0..self.settlements.len())
             .map(|_| Vec::new())
             .collect();
 
-        for (n, settlement) in self.settlements.iter_mut().enumerate() {
-            for (i, household) in settlement.households.iter_mut().enumerate() {
+        for (n, settlement) in self.settlements.iter().enumerate() {
+            for (i, household) in settlement.households.iter().enumerate() {
+                // record that the household is searching for a resource patch
                 if household.resource_patch.is_none() {
                     to_search[n].push(i);
                 }
@@ -94,12 +98,16 @@ impl World {
             for &i in searches {
                 let id = self.settlements[n].id;
 
+                // the household searches for an available patch
                 let unclaimed_patch = self.find_unclaimed_patch(self.settlements[n].position, id);
 
+                // if they fail, there are no neighbouring patches,
+                //   so no other household in the same settlement will find one
                 if unclaimed_patch.is_none() {
                     break;
                 }
 
+                // update the household and matrix
                 self.settlements[n].households[i].resource_patch = unclaimed_patch;
                 let pos = unclaimed_patch.unwrap();
                 self.matrix[pos.0][pos.1] = Cell::Claimed(id);
@@ -112,17 +120,20 @@ impl World {
             let mut requests = Vec::new();
 
             for (i, household) in settlement.households.iter_mut().enumerate() {
+                // if a houshold has a resource patch, they gather resources from it
                 let resources: f64 = if household.resource_patch.is_some() {
-                    self.rng.gen() } else { 0.0 };
+                    World::resources() } else { 0.0 };
 
+                // the household consumes resources and returns how much they need
                 if let Some(required) = household.consume(resources) {
                     requests.push((i, required));
                 }
 
-                household.hunger = 1.0;
+                // TODO: mutate their hunger at some point?
             }
 
             for (i, required) in requests {
+                // TODO: check this
                 settlement.query_donations(i, required, &mut self.rng);
             }
         }
@@ -195,11 +206,12 @@ impl World {
         // TODO -
     }
 
-    pub fn resources(iteration: u32) -> f64 {
+    pub fn resources() -> f64 {
         // TODO
         0.8
     }
 
+    // TODO: check this
     // this is a simple grid traversal algorithm
     pub fn find_unclaimed_patch(&self, pos: Index, id: u32) -> Option<Index> {
         let mut searched = vec![pos];

@@ -1,6 +1,8 @@
 use crate::{L, years_per_move};
 use crate::world::Index;
 
+const CONSUMPTION: f64 = 0.5;
+
 pub struct Household {
     pub id: u32,
     pub resources: f64,
@@ -17,7 +19,7 @@ impl Household {
         Household {
             id,
             resources: 0.0,
-            hunger: 0.0,
+            hunger: -1.0,
             resource_patch: None,
             load: 0.0,
             genes,
@@ -29,11 +31,11 @@ impl Household {
     pub fn consume(&mut self, resources: f64) -> Option<f64> {
         self.resources += resources;
 
-        if self.resources > 0.5 {
-            self.resources -= 0.5;
+        if self.resources > CONSUMPTION {
+            self.resources -= CONSUMPTION;
             None
         } else {
-            let result = Some(self.resources);
+            let result = Some(CONSUMPTION - self.resources);
             self.resources = 0.0;
             result
         }
@@ -65,7 +67,7 @@ impl Household {
         Household {
             id,
             resources: self.resources,
-            hunger: 0.0,
+            hunger: -1.0,
             resource_patch: None,
             load: 0.0,
             genes: self.genes.combine(genes),
