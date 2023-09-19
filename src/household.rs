@@ -1,20 +1,23 @@
-use crate::{L, years_per_move};
 use crate::world::Index;
 
+// TODO: move other constants here
 const CONSUMPTION: f64 = 0.5;
+const L: f64 = 0.6;
+const RESOURCE_DEGREDATION: f64 = 0.0;
 
 pub struct Household {
     pub id: u32,
     pub resources: f64,
+    pub load: f64,
     pub hunger: f64,
     pub resource_patch: Option<Index>,
-    pub load: f64,
     pub genes: Genes,
-    years_since_move: u32,
-    satisfaction: f64,
+    pub years_since_move: u32,
+    pub satisfaction: f64,
 }
 
 impl Household {
+    // TODO: once-over these
     pub fn new(id: u32, genes: Genes) -> Self {
         Household {
             id,
@@ -28,21 +31,23 @@ impl Household {
         }
     }
 
-    pub fn consume(&mut self, resources: f64) -> Option<f64> {
-        self.resources += resources;
+    pub fn required(&self) -> f64 {
+        f64::max(CONSUMPTION - self.resources, 0.0)
+    }
 
-        if self.resources > CONSUMPTION {
-            self.resources -= CONSUMPTION;
-            None
-        } else {
-            let result = Some(CONSUMPTION - self.resources);
-            self.resources = 0.0;
-            result
-        }
+    pub fn provide(&mut self, resources: f64) {
+        self.resources += resources;
+    }
+
+    pub fn consume(&mut self) {
+        self.resources = f64::max(self.resources - CONSUMPTION, 0.0);
+
+        // TODO: update hunger and satisfaction
     }
 
     pub fn query_donation(&mut self, required: f64, query_type: QueryType,
         chance: f64) -> bool {
+
         // don't have the resources to donate
         if required > self.resources {
             return false;
@@ -56,11 +61,14 @@ impl Household {
 
         if donating {
             self.resources -= required;
+            self.load += required;
         }
+
         donating
     }
 
     pub fn birth_new(&mut self, genes: Genes, id: u32) -> Self {
+        // TODO: check if other attributes need to be changed
         // resources are split between parent and child
         self.resources /= 2.0;
 
@@ -80,6 +88,7 @@ impl Household {
         self.resources + self.load
     }
 
+    // these three methods were pulled from cnc
     pub fn is_peer(&self, other_status: f64) -> bool {
         (other_status - self.status()).abs() /
             f64::max(self.status(), other_status)
@@ -102,11 +111,13 @@ impl Household {
         chance < self.hunger * crate::birth_rate
     }
 
+    // TODO: is this switch definitely correct?
     pub fn death(&self, chance: f64) -> bool {
         chance * crate::death_rate < self.hunger 
     }
 
-    pub fn update_satisfaction(&mut self, consumed: f64) {
+    // TODO: obviously you need to get migration working...
+    /*pub fn update_satisfaction(&mut self, consumed: f64) {
         self.satisfaction *= self.years_since_move as f64;
         self.satisfaction += consumed;
 
@@ -120,41 +131,40 @@ impl Household {
     }
 
     fn migrate(&mut self) {
-        if self.years_since_move >= years_per_move {
+        // TODO: 12 is obviously not the right value
+        if self.years_since_move >= 12 {
             //
         }
-    }
+    }*/
 
-    fn degrade_resources(&mut self, delta: f64, degradation: f64) {
-        self.resources *= 1.0 - delta * degradation;
+    fn degrade_resources(&mut self, chance: f64) {
+        self.resources *= 1.0 - RESOURCE_DEGREDATION * chance;
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct Genes {
-    peer_transfer: f64,
-    subordinate_transfer: f64,
-    conformity: f64,
-    attachment: f64,
+    peer_transfer: f64, // likelihood of contributing to peers
+    subordinate_transfer: f64, // ditto for subordinates
+    attachment: f64, // likelihood of remaining in a settlement
 }
 
 impl Genes {
     fn new(peer_transfer: f64, subordinate_transfer: f64,
-           conformity: f64, attachment: f64) -> Self {
+           attachment: f64) -> Self {
         Genes {
             peer_transfer,
             subordinate_transfer,
-            conformity,
             attachment,
         }
     }
 
-    fn altruistic(conformity: f64, attachment: f64) -> Self {
-        Genes::new(1.0, 1.0, conformity, attachment)
+    fn altruistic(attachment: f64) -> Self {
+        Genes::new(1.0, 1.0, attachment)
     }
 
-    fn defective(conformity: f64, attachment: f64) -> Self {
-        Genes::new(0.0, 0.0, conformity, attachment)
+    fn defective(attachment: f64) -> Self {
+        Genes::new(0.0, 0.0, attachment)
     }
 
     fn combine(&self, other: Self) -> Self {
@@ -165,7 +175,7 @@ impl Genes {
 
 impl Default for Genes {
     fn default() -> Self {
-        Self::new(0.5, 0.5, 0.5, 0.5)
+        Self::new(0.5, 0.5, 0.5)
     }
 }
 

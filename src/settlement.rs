@@ -2,10 +2,12 @@ use crate::household::{Household, Genes, QueryType};
 use crate::world::Index;
 use rand::{rngs::ThreadRng, Rng};
 
+// Notes -
+// * a household's id will be completely invalidated when they migrate
+
 pub struct Settlement {
-    pub id: u32,
+    pub id: u32, // used for marking land in the matrix
     pub position: Index,
-    // TODO - implement this as an iterator
     pub households: Vec<Household>,
 }
 

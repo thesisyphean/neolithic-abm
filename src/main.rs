@@ -12,7 +12,6 @@ use crate::world::{World, Settings};
 // TODO
 const birth_rate: f64 = 0.01; // wrong
 const death_rate: f64 = 0.001;
-const L: f64 = 0.6;
 const years_per_move: u32 = 100;
 const beta: f64 = 1.5;
 const m: f64 = 0.005;
