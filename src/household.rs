@@ -4,6 +4,8 @@ use crate::world::Index;
 const CONSUMPTION: f64 = 0.5;
 const L: f64 = 0.6;
 const RESOURCE_DEGREDATION: f64 = 0.0;
+const MUTATION_FREQ: f64 = 0.33;
+const MUTATION_AMPL: f64 = 0.10;
 
 pub struct Household {
     pub id: u32,
@@ -168,8 +170,25 @@ impl Genes {
     }
 
     fn combine(&self, other: Self) -> Self {
-        // TODO - uniform crossover and random mutation
-        Self::default()
+        Genes::new(
+            Self::random_choice(self.peer_transfer, other.peer_transfer),
+            Self::random_choice(self.subordinate_transfer, other.subordinate_transfer),
+            Self::random_choice(self.attachment, other.attachment),
+        )
+    }
+
+    fn random_choice(first: f64, second: f64) -> f64 {
+        let new_gene = if rand::random() {
+            first
+        } else {
+            second
+        };
+
+        if rand::random::<f64>() < MUTATION_FREQ {
+            new_gene + MUTATION_AMPL * rand::random::<f64>()
+        } else {
+            new_gene
+        }
     }
 }
 

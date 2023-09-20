@@ -2,12 +2,9 @@ use crate::household::{Household, Genes, QueryType};
 use crate::world::Index;
 use rand::{rngs::ThreadRng, Rng};
 
-// Notes -
-// * a household's id will be completely invalidated when they migrate
-
 pub struct Settlement {
     pub id: u32, // used for marking land in the matrix
-    pub position: Index,
+    pub position: Index, // position in the matrix
     pub households: Vec<Household>,
 }
 
@@ -70,6 +67,7 @@ impl Settlement {
 
     pub fn status(&self) -> f64 {
         self.households.iter()
+            // TODO: shouldn't this be resources as well?
             .map(|h| h.load)
             .sum()
     }
@@ -80,6 +78,7 @@ impl Settlement {
             .sum::<f64>() / self.households.len() as f64
     }
 
+    // one call of this method invalidates positions, so we need to use ids
     pub fn remove(&mut self, id: u32) -> Household {
         let i = self.households.iter()
             .position(|h| h.id == id)
@@ -88,6 +87,7 @@ impl Settlement {
         self.households.swap_remove(i)
     }
 
+    // the household with id pairs with another household with genes
     pub fn add(&mut self, id: u32, genes: Genes) {
         let i = self.households.iter()
             .position(|h| h.id == id)
@@ -108,7 +108,7 @@ impl Settlement {
             status -= household.load;
         }
 
-        self.households[0].genes
+        panic!("status was > the sum of all statuses")
     }
 
     pub fn population(&self) -> usize {
