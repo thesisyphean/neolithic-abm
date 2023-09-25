@@ -1,6 +1,6 @@
 use crate::settlement::Settlement;
-use rand::{rngs::ThreadRng, Rng, RngCore};
 use std::collections::VecDeque;
+use rand::{rngs::ThreadRng, Rng, RngCore};
 
 pub struct World {
     settings: Settings,
@@ -27,15 +27,12 @@ impl World {
 
         // assert initial_settlements <= cells?
         // spawn the initial settlements
-        // TODO: this is bullshit
         for n in 0..settings.initial_settlements {
-            let mut new_index = rng.next_u32() as usize % (cells - n) + 1;
+            let mut new_index = rng.next_u32() as usize % (cells - n);
 
             'outer: for i in 0..settings.size {
                 for j in 0..settings.size {
                     if let Cell::Unclaimed = matrix[i][j] {
-                        new_index -= 1;
-
                         if new_index == 0 {
                             // create and place the settlement
                             let settlement = Settlement::new(n as u32,
@@ -45,6 +42,8 @@ impl World {
 
                             break 'outer;
                         }
+
+                        new_index -= 1;
                     }
                 }
             }
@@ -61,7 +60,9 @@ impl World {
 
     pub fn iterate(&mut self) {
         // agents without a resource patch try to claim one
-        self.iterate_settlement();
+        if self.count_population() < self.settings.size.pow(2) {
+            self.iterate_settlement();
+        }
 
         // agents consume and request resources
         self.iterate_consumption();
@@ -121,20 +122,26 @@ impl World {
 
             for (i, household) in settlement.households.iter_mut().enumerate() {
                 // if a houshold has a resource patch, they gather resources from it
-                let resources: f64 = if household.resource_patch.is_some() {
-                    World::resources() } else { 0.0 };
+                household.provide(if household.resource_patch.is_some() {
+                    World::resources() } else { 0.0 });
 
-                // the household consumes resources and returns how much they need
-                if let Some(required) = household.consume(resources) {
+                // the household returns how much they need
+                let required = household.required();
+                if required > 0.0 {
                     requests.push((i, required));
                 }
-
-                // TODO: mutate their hunger at some point?
             }
 
+            // perform the requests
             for (i, required) in requests {
-                // TODO: check this
-                settlement.query_donations(i, required, &mut self.rng);
+                if settlement.query_donations(i, required, &mut self.rng) {
+                    settlement.households[i].provide(required);
+                }
+            }
+
+            // having gathered and requested resources, agents consume them
+            for household in &mut settlement.households {
+                household.consume();
             }
         }
     }
@@ -185,6 +192,8 @@ impl World {
     }
 
     fn iterate_death(&mut self) {
+        let mut settlements_to_remove = Vec::new();
+
         for settlement in &mut self.settlements {
             let to_remove: Vec<_> = settlement.households.iter()
                 .filter(|h| h.death(self.rng.gen()))
@@ -199,6 +208,18 @@ impl World {
                     self.matrix[pos.0][pos.1] = Cell::Unclaimed;
                 }
             }
+
+            if settlement.households.len() == 0 {
+                settlements_to_remove.push(settlement.id);
+            }
+        }
+
+        for settlement_id in settlements_to_remove {
+            let position = self.settlements.iter()
+                .position(|s| s.id == settlement_id)
+                .unwrap();
+
+            self.settlements.swap_remove(position);
         }
     }
 
@@ -211,7 +232,6 @@ impl World {
         0.8
     }
 
-    // TODO: check this
     // this is a simple grid traversal algorithm
     pub fn find_unclaimed_patch(&self, pos: Index, id: u32) -> Option<Index> {
         let mut searched = vec![pos];
@@ -255,7 +275,18 @@ impl World {
         self.settlements.iter()
             .map(|s| s.population())
             .sum()
-    } 
+    }
+
+    pub fn average_cooperation(&self) -> f64 {
+        self.settlements.iter()
+            .map(|s| s.cooperation())
+            .sum::<f64>() / self.count_settlements() as f64
+    }
+
+    // TODO: this is gonna be weird...
+    pub fn gini_coefficient(&self) -> f64 {
+        0.0
+    }
 }
 
 enum Cell {
@@ -296,7 +327,6 @@ impl Index {
     }
 }
 
-// TODO
 pub struct Settings {
     pub size: usize,
     pub initial_settlements: usize,

@@ -10,16 +10,18 @@ mod household;
 use crate::world::{World, Settings};
 
 // TODO
-const birth_rate: f64 = 0.01; // wrong
-const death_rate: f64 = 0.001;
+const BIRTH_RATE: f64 = 0.1;
+const DEATH_RATE: f64 = 0.000001;
 const years_per_move: u32 = 100;
 const beta: f64 = 1.5;
 const m: f64 = 0.005;
 
+const ITERATIONS: u32 = 1_000;
+
 fn main() {
     let settings = Settings {
-        size: 1000,
-        initial_settlements: 3,
+        size: 50,
+        initial_settlements: 10,
         initial_households: 100,
     };
 
@@ -29,18 +31,24 @@ fn main() {
 }
 
 fn run(settings: Settings) -> Result<(), Box<dyn Error>> {
-    let mut writer = Writer::from_path("results.csv")?;
+    let mut writer = Writer::from_path("results/results.csv")?;
     writer.write_record(&["Iteration", "Settlements", "Population"])?;
 
     let mut world = World::new(settings);
-    for i in 0..10_000 {
+    for i in 1..=ITERATIONS {
         let iteration = i.to_string();
         let settlements = world.count_settlements().to_string();
-        let population = world.count_population().to_string();
+        let pop = world.count_population();
+        let coop = world.average_cooperation();
+        let population = pop.to_string();
 
         writer.write_record(&[iteration, settlements, population])?;
 
         world.iterate();
+
+        if i % 2 == 1 {
+            println!("Iteration {} complete - population {} - cooperation {}", i, pop, coop);
+        }
     }
 
     // TODO: Why is this important?

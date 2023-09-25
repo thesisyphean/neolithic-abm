@@ -5,7 +5,7 @@ const CONSUMPTION: f64 = 0.5;
 const L: f64 = 0.6;
 const RESOURCE_DEGREDATION: f64 = 0.0;
 const MUTATION_FREQ: f64 = 0.33;
-const MUTATION_AMPL: f64 = 0.10;
+const MUTATION_AMPL: f64 = 0.25;
 
 pub struct Household {
     pub id: u32,
@@ -24,7 +24,7 @@ impl Household {
         Household {
             id,
             resources: 0.0,
-            hunger: -1.0,
+            hunger: 0.0,
             resource_patch: None,
             load: 0.0,
             genes,
@@ -45,6 +45,7 @@ impl Household {
         self.resources = f64::max(self.resources - CONSUMPTION, 0.0);
 
         // TODO: update hunger and satisfaction
+        self.hunger = f64::min(self.resources / 0.5, 1.0);
     }
 
     pub fn query_donation(&mut self, required: f64, query_type: QueryType,
@@ -77,7 +78,7 @@ impl Household {
         Household {
             id,
             resources: self.resources,
-            hunger: -1.0,
+            hunger: 0.0,
             resource_patch: None,
             load: 0.0,
             genes: self.genes.combine(genes),
@@ -110,12 +111,11 @@ impl Household {
     }
 
     pub fn birth(&self, chance: f64) -> bool {
-        chance < self.hunger * crate::birth_rate
+        chance < self.hunger * crate::BIRTH_RATE
     }
 
-    // TODO: is this switch definitely correct?
     pub fn death(&self, chance: f64) -> bool {
-        chance * crate::death_rate < self.hunger 
+        chance * self.hunger < crate::DEATH_RATE
     }
 
     // TODO: obviously you need to get migration working...
@@ -190,11 +190,15 @@ impl Genes {
             new_gene
         }
     }
+
+    pub fn cooperation(&self) -> f64 {
+        (self.peer_transfer + self.subordinate_transfer) / 2.0
+    }
 }
 
 impl Default for Genes {
     fn default() -> Self {
-        Self::new(0.5, 0.5, 0.5)
+        Self::new(0.0, 0.0, 0.5)
     }
 }
 

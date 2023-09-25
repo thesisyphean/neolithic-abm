@@ -28,9 +28,7 @@ impl Settlement {
         // check with superiors first
         for (j, other_household) in self.households.iter_mut().enumerate() {
             if i != j && other_household.is_auth(status) {
-                let chance: f64 = rng.gen();
-
-                if other_household.query_donation(required, QueryType::Subordinate, chance) {
+                if other_household.query_donation(required, QueryType::Subordinate, rng.gen()) {
                     return true;
                 }
             }
@@ -39,15 +37,13 @@ impl Settlement {
         // check with peers second
         for (j, other_household) in self.households.iter_mut().enumerate() {
             if i != j && other_household.is_peer(status) {
-                let chance: f64 = rng.gen();
-
-                if other_household.query_donation(required, QueryType::Peer, chance) {
+                if other_household.query_donation(required, QueryType::Peer, rng.gen()) {
                     return true;
                 }
             }
         }
 
-        // get from subordinates last
+        // check with subordinates last
         for (j, other_household) in self.households.iter_mut().enumerate() {
             if i != j && other_household.is_sub(status) {
                 if other_household.query_donation(required, QueryType::Superior, 0.0) {
@@ -56,7 +52,6 @@ impl Settlement {
             }
         }
 
-        self.households[i].hunger = 2.0 * (0.5 - required);
         false
     }
 
@@ -89,14 +84,23 @@ impl Settlement {
 
     // the household with id pairs with another household with genes
     pub fn add(&mut self, id: u32, genes: Genes) {
-        let i = self.households.iter()
-            .position(|h| h.id == id)
-            .unwrap();
+        let new_id = self.max_id() + 1;
+        let pos = self.pos(id);
 
-        let new_id = self.households.len() as u32;
-        let new_household = self.households[i].birth_new(genes, new_id);
-
+        let new_household = self.households[pos].birth_new(genes, new_id);
         self.households.push(new_household);
+    }
+
+    fn max_id(&self) -> u32 {
+        self.households.iter()
+            .map(|h| h.id)
+            .max().unwrap_or(0)
+    }
+
+    fn pos(&self, id: u32) -> usize {
+        self.households.iter()
+            .position(|h| h.id == id)
+            .unwrap()
     }
 
     pub fn find_genes(&self, mut status: f64) -> Genes {
@@ -113,5 +117,11 @@ impl Settlement {
 
     pub fn population(&self) -> usize {
         self.households.len()
+    }
+
+    pub fn cooperation(&self) -> f64 {
+        self.households.iter()
+            .map(|h| h.genes.cooperation())
+            .sum::<f64>() / self.population() as f64
     }
 }

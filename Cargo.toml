@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 csv = "1.2.2"
 rand = "0.8"
+flamegraph = "0.5.1"
