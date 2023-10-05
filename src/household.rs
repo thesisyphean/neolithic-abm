@@ -3,7 +3,7 @@ use crate::world::Index;
 // TODO: move other constants here
 const CONSUMPTION: f64 = 0.5;
 const L: f64 = 0.6;
-const RESOURCE_DEGREDATION: f64 = 0.0;
+const RESOURCE_DEGREDATION: f64 = 0.8;
 const MUTATION_FREQ: f64 = 0.33;
 const MUTATION_AMPL: f64 = 0.25;
 
@@ -42,10 +42,12 @@ impl Household {
     }
 
     pub fn consume(&mut self) {
-        self.resources = f64::max(self.resources - CONSUMPTION, 0.0);
-
-        // TODO: update hunger and satisfaction
+        // this was originally after consumption of resources,
+        //   but that makes absolutely no sense to me
         self.hunger = f64::min(self.resources / 0.5, 1.0);
+        self.resources = f64::max(self.resources - CONSUMPTION, 0.0);
+        // TODO: update satisfaction
+        // self.resources *= 1.0 - RESOURCE_DEGREDATION;
     }
 
     pub fn query_donation(&mut self, required: f64, query_type: QueryType,
@@ -115,7 +117,8 @@ impl Household {
     }
 
     pub fn death(&self, chance: f64) -> bool {
-        chance * self.hunger < crate::DEATH_RATE
+        // chance * self.hunger < crate::DEATH_RATE
+        chance < crate::DEATH_RATE
     }
 
     // TODO: obviously you need to get migration working...
@@ -146,9 +149,9 @@ impl Household {
 
 #[derive(Clone, Copy)]
 pub struct Genes {
-    peer_transfer: f64, // likelihood of contributing to peers
-    subordinate_transfer: f64, // ditto for subordinates
-    attachment: f64, // likelihood of remaining in a settlement
+    pub peer_transfer: f64, // likelihood of contributing to peers
+    pub subordinate_transfer: f64, // ditto for subordinates
+    pub attachment: f64, // likelihood of remaining in a settlement
 }
 
 impl Genes {
@@ -178,17 +181,17 @@ impl Genes {
     }
 
     fn random_choice(first: f64, second: f64) -> f64 {
-        let new_gene = if rand::random() {
+        let mut new_gene = if rand::random() {
             first
         } else {
             second
         };
 
         if rand::random::<f64>() < MUTATION_FREQ {
-            new_gene + MUTATION_AMPL * rand::random::<f64>()
-        } else {
-            new_gene
+            new_gene += MUTATION_AMPL * rand::random::<f64>()
         }
+
+        new_gene.clamp(0.0, 1.0)
     }
 
     pub fn cooperation(&self) -> f64 {
@@ -198,7 +201,7 @@ impl Genes {
 
 impl Default for Genes {
     fn default() -> Self {
-        Self::new(0.0, 0.0, 0.5)
+        Self::new(0.5, 0.5, 0.5)
     }
 }
 

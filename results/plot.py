@@ -9,9 +9,12 @@ def main():
     plt.figure()
 
     plot_vs_iteration(data, "Population")
-    plot_vs_iteration(data, "Cooperation")
     plot_vs_iteration(data, "AveResources")
     plot_vs_iteration(data, "MaxLoad")
+    plot_vs_iteration(data, "PeerTransfer")
+    plot_vs_iteration(data, "SubTransfer")
+
+    # TODO: Plot the heatmap
 
 def plot_vs_iteration(data, variable):
     plt.clf()

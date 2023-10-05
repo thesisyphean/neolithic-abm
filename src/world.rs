@@ -1,6 +1,6 @@
-use crate::settlement::Settlement;
-use std::collections::VecDeque;
-use rand::{rngs::ThreadRng, Rng, RngCore};
+use crate::{Settings, settlement::Settlement};
+use std::{collections::VecDeque, f64::consts::PI};
+use rand::{rngs::ThreadRng, Rng, RngCore, thread_rng};
 
 pub struct World {
     settings: Settings,
@@ -12,11 +12,11 @@ pub struct World {
 
 impl World {
     pub fn new(settings: Settings) -> Self {
-        let cells = settings.size * settings.size;
+        let cells = crate::SIZE.pow(2);
 
         // create the matrix with all unclaimed cells
-        let mut matrix: Vec<Vec<_>> = (0..settings.size)
-            .map(|_| (0..settings.size)
+        let mut matrix: Vec<Vec<_>> = (0..crate::SIZE)
+            .map(|_| (0..crate::SIZE)
                 .map(|_| Cell::Unclaimed)
                 .collect())
             .collect();
@@ -27,16 +27,16 @@ impl World {
 
         // assert initial_settlements <= cells?
         // spawn the initial settlements
-        for n in 0..settings.initial_settlements {
+        for n in 0..crate::SETTLEMENTS {
             let mut new_index = rng.next_u32() as usize % (cells - n);
 
-            'outer: for i in 0..settings.size {
-                for j in 0..settings.size {
+            'outer: for i in 0..crate::SIZE {
+                for j in 0..crate::SIZE {
                     if let Cell::Unclaimed = matrix[i][j] {
                         if new_index == 0 {
                             // create and place the settlement
                             let settlement = Settlement::new(n as u32,
-                                Index(i, j), settings.initial_households);
+                                Index(i, j), crate::HOUSHOLDS);
                             settlements.push(settlement);
                             matrix[i][j] = Cell::Settled(n as u32);
 
@@ -60,7 +60,8 @@ impl World {
 
     pub fn iterate(&mut self) {
         // agents without a resource patch try to claim one
-        if self.count_population() < self.settings.size.pow(2) {
+        // TODO: Is this even vaguely valid?
+        if self.count_population() < crate::SIZE.pow(2) {
             self.iterate_settlement();
         }
 
@@ -123,7 +124,7 @@ impl World {
             for (i, household) in settlement.households.iter_mut().enumerate() {
                 // if a houshold has a resource patch, they gather resources from it
                 household.provide(if household.resource_patch.is_some() {
-                    World::resources() } else { 0.0 });
+                    Self::resources(self.iteration, self.settings.f) } else { 0.0 });
 
                 // the household returns how much they need
                 let required = household.required();
@@ -146,7 +147,6 @@ impl World {
         }
     }
 
-    // we know that an agent's hunger has been set
     fn iterate_birth(&mut self) {
         let mut births: Vec<_> = (0..self.settlements.len())
             .map(|_| Vec::new())
@@ -184,8 +184,8 @@ impl World {
             }
         }
 
-        for (n, settlement_births) in births.into_iter().enumerate() {
-            for (id, genes) in settlement_births {
+        for (n, settlement_births) in births.iter().enumerate() {
+            for &(id, genes) in settlement_births {
                 self.settlements[n].add(id, genes);
             }
         }
@@ -200,7 +200,7 @@ impl World {
                 .map(|h| h.id)
                 .collect();
 
-            let removed = settlement.households.drain_filter(|h|
+            let removed = settlement.households.extract_if(|h|
                 to_remove.contains(&h.id));
             
             for household in removed {
@@ -227,15 +227,14 @@ impl World {
         // TODO -
     }
 
-    pub fn resources() -> f64 {
-        // TODO
-        0.8
+    pub fn resources(t: u32, f: f64) -> f64 {
+        ResourceGenerator::generate(t, f)
     }
 
     // this is a simple grid traversal algorithm
     pub fn find_unclaimed_patch(&self, pos: Index, id: u32) -> Option<Index> {
         let mut searched = vec![pos];
-        let mut to_search = VecDeque::from(pos.surroundings(self.settings.size as isize));
+        let mut to_search = VecDeque::from(pos.surroundings(crate::SIZE as isize));
 
         while !to_search.is_empty() {
             let current_pos = to_search.pop_front().unwrap();
@@ -258,13 +257,17 @@ impl World {
             // otherwise we are trespassing
             if let Cell::Claimed(cid) = cell {
                 if *cid == id {
-                    let mut surroundings = VecDeque::from(current_pos.surroundings(self.settings.size as isize));
+                    let mut surroundings = VecDeque::from(current_pos.surroundings(crate::SIZE as isize));
                     to_search.append(&mut surroundings);
                 }
             }
         }
 
         None
+    }
+
+    pub fn iteration(&self) -> u32 {
+        self.iteration
     }
 
     pub fn count_settlements(&self) -> usize {
@@ -279,8 +282,31 @@ impl World {
 
     pub fn average_cooperation(&self) -> f64 {
         self.settlements.iter()
-            .map(|s| s.cooperation())
+            .map(|s| s.average_cooperation())
             .sum::<f64>() / self.count_settlements() as f64
+    }
+
+    pub fn cooperation(&self) -> (f64, f64) {
+        let transfer = self.settlements.iter()
+            .fold((0.0, 0.0), |a, s| {
+                let coop = s.cooperation();
+                (a.0 + coop.0, a.1 + coop.1)
+            });
+        
+        let set= self.count_settlements() as f64;
+        (transfer.0 / set, transfer.1 / set)
+    }
+
+    pub fn average_resources(&self) -> f64 {
+        self.settlements.iter()
+            .map(|s| s.average_resources())
+            .sum::<f64>() / self.count_settlements() as f64
+    }
+
+    pub fn max_load(&self) -> f64 {
+        self.settlements.iter()
+            .map(|s| s.max_load())
+            .fold(0.0 / 0.0, f64::max)
     }
 
     // TODO: this is gonna be weird...
@@ -327,8 +353,23 @@ impl Index {
     }
 }
 
-pub struct Settings {
-    pub size: usize,
-    pub initial_settlements: usize,
-    pub initial_households: usize,
+pub struct ResourceGenerator;
+
+impl ResourceGenerator {
+    fn s(x: f64, f: f64) -> f64 {
+        0.5 * (2.0 * PI * x * f).sin() + 0.5
+    }
+
+    fn lerp(r_min: f64, r_max: f64, x: f64, f: f64) -> f64 {
+        r_min + Self::s(x, f) * (r_max - r_min)
+    }
+
+    pub fn generate(t: u32, f: f64) -> f64 {
+        let x = t as f64 / crate::ITERATIONS as f64;
+
+        let a = Self::lerp(0.0, 0.6, x, f);
+        let b = Self::lerp(0.4, 1.0, x, f);
+
+        thread_rng().gen_range(a..b)
+    }
 }

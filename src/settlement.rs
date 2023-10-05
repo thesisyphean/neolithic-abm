@@ -67,12 +67,6 @@ impl Settlement {
             .sum()
     }
 
-    pub fn average_resources(&self) -> f64 {
-        self.households.iter()
-            .map(|h| h.resources)
-            .sum::<f64>() / self.households.len() as f64
-    }
-
     // one call of this method invalidates positions, so we need to use ids
     pub fn remove(&mut self, id: u32) -> Household {
         let i = self.households.iter()
@@ -119,9 +113,30 @@ impl Settlement {
         self.households.len()
     }
 
-    pub fn cooperation(&self) -> f64 {
+    pub fn average_cooperation(&self) -> f64 {
         self.households.iter()
             .map(|h| h.genes.cooperation())
             .sum::<f64>() / self.population() as f64
+    }
+
+    pub fn cooperation(&self) -> (f64, f64) {
+        let coop_sum = self.households.iter()
+            .fold((0.0, 0.0), |a, h|
+                (a.0 + h.genes.peer_transfer, a.1 + h.genes.subordinate_transfer));
+
+        let pop = self.population() as f64;
+        (coop_sum.0 / pop, coop_sum.1 / pop)
+    }
+
+    pub fn average_resources(&self) -> f64 {
+        self.households.iter()
+            .map(|h| h.resources)
+            .sum::<f64>() / self.population() as f64
+    }
+
+    pub fn max_load(&self) -> f64 {
+        self.households.iter()
+            .map(|h| h.load)
+            .fold(0.0 / 0.0, f64::max)
     }
 }
