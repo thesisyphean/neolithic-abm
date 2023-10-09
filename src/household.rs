@@ -3,7 +3,7 @@ use crate::world::Index;
 // TODO: move other constants here
 const CONSUMPTION: f64 = 0.5;
 const L: f64 = 0.6;
-const RESOURCE_DEGREDATION: f64 = 0.8;
+const RESOURCE_DEGREDATION: f64 = 0.5;
 const MUTATION_FREQ: f64 = 0.33;
 const MUTATION_AMPL: f64 = 0.25;
 
@@ -47,7 +47,7 @@ impl Household {
         self.hunger = f64::min(self.resources / 0.5, 1.0);
         self.resources = f64::max(self.resources - CONSUMPTION, 0.0);
         // TODO: update satisfaction
-        // self.resources *= 1.0 - RESOURCE_DEGREDATION;
+        self.resources *= 1.0 - RESOURCE_DEGREDATION;
     }
 
     pub fn query_donation(&mut self, required: f64, query_type: QueryType,
@@ -188,7 +188,7 @@ impl Genes {
         };
 
         if rand::random::<f64>() < MUTATION_FREQ {
-            new_gene += MUTATION_AMPL * rand::random::<f64>()
+            new_gene += MUTATION_AMPL * (rand::random::<f64>() * 2.0 - 1.0)
         }
 
         new_gene.clamp(0.0, 1.0)

@@ -10,7 +10,7 @@ use csv::Writer;
 use std::fmt::Display;
 
 // These are constant across simulations
-const SIZE: usize = 100;
+const SIZE: usize = 50;
 const SETTLEMENTS: usize = 10;
 const HOUSHOLDS: usize = 100;
 const ITERATIONS: u32 = 10000;
@@ -42,11 +42,11 @@ impl Settings {
 
 fn main() {
     let settings = vec![
-        Settings::new(1.0, 0.0, "f1"),
-        Settings::new(2.0, 0.0, "f2"),
+        // Settings::new(1.0, 0.0, "f1"),
+        // Settings::new(2.0, 0.0, "f2"),
         Settings::new(4.0, 0.0, "f4"),
-        Settings::new(8.0, 0.0, "f8"),
-        Settings::new(16.0, 0.0, "f16"),
+        // Settings::new(8.0, 0.0, "f8"),
+        // Settings::new(16.0, 0.0, "f16"),
     ];
 
     let results: Vec<_> = settings.into_par_iter()
