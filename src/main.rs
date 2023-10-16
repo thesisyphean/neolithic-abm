@@ -75,8 +75,13 @@ fn generate_settings() -> Vec<Settings> {
                 let f_final = 2.0f64.powi(f);
                 let degradation = 0.1 * d as f64;
 
-                let title = format!("d{}_f{}_{}", d, f, genes);
-                let path = format!("results/d{}_f{}/{}.csv", d, f, title);
+                let title = format!("f{}_d{}_{}", f, d, genes);
+                let folder = format!("results/f{}_d{}", f, d);
+                let path = format!("{}/{}.csv", folder, title);
+
+                if genes == Genes::default() {
+                    fs::create_dir(folder).unwrap();
+                }
 
                 settings.push(Settings::new(f_final, degradation, title, path, genes));
             }

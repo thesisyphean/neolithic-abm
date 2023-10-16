@@ -142,7 +142,7 @@ impl Household {
     }*/
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Genes {
     pub peer_transfer: f64, // likelihood of contributing to peers
     pub subordinate_transfer: f64, // ditto for subordinates
