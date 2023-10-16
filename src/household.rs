@@ -190,26 +190,6 @@ impl Genes {
     }
 }
 
-impl Default for Genes {
-    fn default() -> Self {
-        Self::new(0.5, 0.5)
-    }
-}
-
-impl Display for Genes {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", if (self.peer_transfer - 1.0).abs() <= 1.0e-5 {
-            'A'
-        } else if (self.peer_transfer - 0.5).abs() <= 1.0e-5 {
-            'S'
-        } else if self.peer_transfer <= 1.0e-5 {
-            'D'
-        } else {
-            'U'
-        })
-    }
-}
-
 pub enum QueryType {
     Superior,
     Peer,

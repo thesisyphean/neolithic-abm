@@ -1,3 +1,4 @@
+use crate::GeneSettings;
 use crate::household::{Household, Genes, QueryType};
 use crate::world::Index;
 use rand::{rngs::ThreadRng, Rng};
@@ -9,10 +10,19 @@ pub struct Settlement {
 }
 
 impl Settlement {
-    pub fn new(id: u32, position: Index, initial_households: usize, initial_genes: Genes) -> Self {
+    pub fn new(id: u32, position: Index, initial_households: usize, initial_genes: GeneSettings) -> Self {
         let households = (0..initial_households)
-            .map(|n| Household::new(n as u32, initial_genes))
-            .collect();
+            .map(|n| {
+                Household::new(n as u32, match initial_genes {
+                    GeneSettings::Altruistic => Genes::altruistic(),
+                    GeneSettings::Defective => Genes::defective(),
+                    GeneSettings::Split => if n % 2 == 0 {
+                        Genes::altruistic()
+                    } else {
+                        Genes::defective()
+                    }
+                })
+            }).collect();
 
         Settlement {
             id,

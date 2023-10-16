@@ -32,11 +32,11 @@ pub struct Settings {
     pub degradation: f64,
     pub title: String,
     pub path: String,
-    pub genes: Genes,
+    pub genes: GeneSettings,
 }
 
 impl Settings {
-    fn new(f: f64, degradation: f64, title: String, path: String, genes: Genes) -> Self {
+    fn new(f: f64, degradation: f64, title: String, path: String, genes: GeneSettings) -> Self {
         Settings {
             f,
             degradation,
@@ -44,6 +44,23 @@ impl Settings {
             path,
             genes: genes,
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum GeneSettings {
+    Altruistic,
+    Defective,
+    Split,
+}
+
+impl Display for GeneSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            GeneSettings::Altruistic => 'A',
+            GeneSettings::Defective => 'D',
+            GeneSettings::Split => 'S',
+        })
     }
 }
 
@@ -69,9 +86,9 @@ fn generate_settings() -> Vec<Settings> {
     fs::remove_dir_all("results").unwrap();
     fs::create_dir("results").unwrap();
 
-    for genes in [Genes::default(), Genes::altruistic(), Genes::defective()] {
+    for genes in [GeneSettings::Split, GeneSettings::Altruistic, GeneSettings::Defective] {
         let folder = format!("results/{}", genes);
-        fs::create_dir(folder).unwrap();
+        fs::create_dir(&folder).unwrap();
 
         for f in 0..8 {
             for d in 0..10 {
