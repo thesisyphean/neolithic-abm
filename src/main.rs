@@ -119,7 +119,7 @@ fn run(settings: Settings) -> Result<(), RunError> {
             "MaxLoad",
             "PeerTransfer",
             "SubTransfer",
-            "Gini",
+            "Egalitarianism",
         ])
         .map_err(RunError::CSVError)?;
 
@@ -135,7 +135,7 @@ fn run(settings: Settings) -> Result<(), RunError> {
             Box::new(world.max_load()),
             Box::new(peer),
             Box::new(subordinate),
-            Box::new(world.gini_coefficient()),
+            Box::new(world.egalitarianism()),
         ];
 
         writer

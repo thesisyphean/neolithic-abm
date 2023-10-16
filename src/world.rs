@@ -346,6 +346,10 @@ impl World {
         //   rmad = mad / am
         0.5 * mean_absolute_difference / mean
     }
+
+    pub fn egalitarianism(&self) -> f64 {
+        1.0 / self.gini_coefficient()
+    }
 }
 
 enum Cell {
