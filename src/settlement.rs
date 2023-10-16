@@ -9,9 +9,9 @@ pub struct Settlement {
 }
 
 impl Settlement {
-    pub fn new(id: u32, position: Index, initial_households: usize) -> Self {
+    pub fn new(id: u32, position: Index, initial_households: usize, initial_genes: Genes) -> Self {
         let households = (0..initial_households)
-            .map(|n| Household::new(n as u32, Genes::default()))
+            .map(|n| Household::new(n as u32, initial_genes))
             .collect();
 
         Settlement {
@@ -126,6 +126,12 @@ impl Settlement {
 
         let pop = self.population() as f64;
         (coop_sum.0 / pop, coop_sum.1 / pop)
+    }
+
+    pub fn statuses(&self) -> Vec<f64> {
+        self.households.iter()
+            .map(|h| h.status())
+            .collect()
     }
 
     pub fn average_resources(&self) -> f64 {

@@ -1,23 +1,20 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import sys
+import os
 
 def main():
-    args = sys.argv
-
-    if len(args) < 2:
-        print("Didn't recieve results files to plot!")
-        exit()
-
     sns.set_theme()
     plt.figure()
 
-    for result_file in args[1:]:
-        plot(result_file)
+    files_and_dirs = os.listdir("results")
+    for file_or_dir in files_and_dirs:
+        if file_or_dir.endswith(".csv"):
+            plot(file_or_dir)
 
-def plot(result_file):
-    data = pd.read_csv(f"results/{result_file}.csv")
+def plot(file):
+    result_file = file[:-4]
+    data = pd.read_csv(f"results/" + file)
 
     plot_vs_iteration(data, "Population", result_file)
     plot_vs_iteration(data, "AveResources", result_file)

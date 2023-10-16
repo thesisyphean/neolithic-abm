@@ -1,9 +1,9 @@
 use crate::world::Index;
+use std::fmt::{self, Display};
 
 // TODO: move other constants here
 const CONSUMPTION: f64 = 0.5;
 const L: f64 = 0.6;
-const RESOURCE_DEGREDATION: f64 = 0.5;
 const MUTATION_FREQ: f64 = 0.33;
 const MUTATION_AMPL: f64 = 0.25;
 
@@ -47,7 +47,6 @@ impl Household {
         self.hunger = f64::min(self.resources / 0.5, 1.0);
         self.resources = f64::max(self.resources - CONSUMPTION, 0.0);
         // TODO: update satisfaction
-        self.resources *= 1.0 - RESOURCE_DEGREDATION;
     }
 
     pub fn query_donation(&mut self, required: f64, query_type: QueryType,
@@ -141,42 +140,34 @@ impl Household {
             //
         }
     }*/
-
-    fn degrade_resources(&mut self, chance: f64) {
-        self.resources *= 1.0 - RESOURCE_DEGREDATION * chance;
-    }
 }
 
 #[derive(Clone, Copy)]
 pub struct Genes {
     pub peer_transfer: f64, // likelihood of contributing to peers
     pub subordinate_transfer: f64, // ditto for subordinates
-    pub attachment: f64, // likelihood of remaining in a settlement
 }
 
 impl Genes {
-    fn new(peer_transfer: f64, subordinate_transfer: f64,
-           attachment: f64) -> Self {
+    fn new(peer_transfer: f64, subordinate_transfer: f64) -> Self {
         Genes {
             peer_transfer,
             subordinate_transfer,
-            attachment,
         }
     }
 
-    fn altruistic(attachment: f64) -> Self {
-        Genes::new(1.0, 1.0, attachment)
+    pub fn altruistic() -> Self {
+        Genes::new(1.0, 1.0)
     }
 
-    fn defective(attachment: f64) -> Self {
-        Genes::new(0.0, 0.0, attachment)
+    pub fn defective() -> Self {
+        Genes::new(0.0, 0.0)
     }
 
     fn combine(&self, other: Self) -> Self {
         Genes::new(
             Self::random_choice(self.peer_transfer, other.peer_transfer),
             Self::random_choice(self.subordinate_transfer, other.subordinate_transfer),
-            Self::random_choice(self.attachment, other.attachment),
         )
     }
 
@@ -201,7 +192,21 @@ impl Genes {
 
 impl Default for Genes {
     fn default() -> Self {
-        Self::new(0.5, 0.5, 0.5)
+        Self::new(0.5, 0.5)
+    }
+}
+
+impl Display for Genes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", if (self.peer_transfer - 1.0).abs() <= 1.0e-5 {
+            'A'
+        } else if (self.peer_transfer - 0.5).abs() <= 1.0e-5 {
+            'S'
+        } else if self.peer_transfer <= 1.0e-5 {
+            'D'
+        } else {
+            'U'
+        })
     }
 }
 

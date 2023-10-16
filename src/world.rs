@@ -36,7 +36,8 @@ impl World {
                         if new_index == 0 {
                             // create and place the settlement
                             let settlement = Settlement::new(n as u32,
-                                Index(i, j), crate::HOUSHOLDS);
+                                Index(i, j), crate::HOUSHOLDS,
+                                settings.genes);
                             settlements.push(settlement);
                             matrix[i][j] = Cell::Settled(n as u32);
 
@@ -76,6 +77,9 @@ impl World {
 
         // agents migrate based on their satisfaction
         // self.iterate_migration();
+
+        // agents' resources degrade
+        self.iterate_degradation();
 
         self.iteration += 1;
     }
@@ -227,6 +231,14 @@ impl World {
         // TODO -
     }
 
+    pub fn iterate_degradation(&mut self) {
+        for settlement in self.settlements.iter_mut() {
+            for household in settlement.households.iter_mut() {
+                household.resources *= 1.0 - self.settings.degradation;
+            }
+        }
+    }
+
     pub fn resources(t: u32, f: f64) -> f64 {
         ResourceGenerator::generate(t, f)
     }
@@ -309,9 +321,30 @@ impl World {
             .fold(0.0 / 0.0, f64::max)
     }
 
-    // TODO: this is gonna be weird...
+    /// Calculates the Gini coefficient of the statuses of all households
     pub fn gini_coefficient(&self) -> f64 {
-        0.0
+        // combine all statuses into a single vector
+        let statuses = self.settlements.iter()
+            .map(|s| s.statuses())
+            .fold(Vec::new(), |mut a, mut e| { a.append(&mut e); a });
+        let len = statuses.len() as f64;
+
+        let mean = statuses.iter()
+            .sum::<f64>() / len;
+
+        // mad is the sum of the absolute difference between all possible pairs
+        let mut mean_absolute_difference = 0.0;
+        for x in statuses.iter() {
+            for y in statuses.iter() {
+                mean_absolute_difference += (x - y).abs();
+            }
+        }
+        // divided by n^2
+        mean_absolute_difference /= len * len;
+
+        // the Gini coefficient is 0.5 * rmad where
+        //   rmad = mad / am
+        0.5 * mean_absolute_difference / mean
     }
 }
 
