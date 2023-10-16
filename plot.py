@@ -9,8 +9,30 @@ def main():
 
     files_and_dirs = os.listdir("results")
     for file_or_dir in files_and_dirs:
-        if file_or_dir.endswith(".csv"):
-            plot(file_or_dir)
+        path = "results/" + file_or_dir
+        if os.path.isdir(path):
+            plot_folder(path)
+
+def plot_folder(path):
+    data = read_dataframe(path)
+
+    # TODO: annot and fmt
+    sns.heatmap(data=data, x="f", y="d", annot=True, cmap="YlGnBu")
+    # TODO: clf and savefig, title, etc.
+
+def read_dataframe(path):
+    dataframes = []
+
+    for file in os.listdir(path):
+        path += "/" + file
+        if os.path.isfile(path):
+            data = pd.read_csv(path).tail(1)
+            # TODO:
+            data["f"] =
+            data["d"] =
+            dataframes.append(data)
+
+    return pd.concat(dataframes)
 
 def plot(file):
     result_file = file[:-4]
@@ -21,8 +43,6 @@ def plot(file):
     plot_vs_iteration(data, "MaxLoad", result_file)
     plot_vs_iteration(data, "PeerTransfer", result_file)
     plot_vs_iteration(data, "SubTransfer", result_file)
-
-    # TODO: Plot the heatmap
 
 def plot_vs_iteration(data, variable, result_file):
     plt.clf()

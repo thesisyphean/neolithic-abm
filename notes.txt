@@ -1,1 +1,6 @@
 1. Reproducibility - Random seed
+
+2. Experiment
+3. Averages
+4. Heatmap
+5. Report
