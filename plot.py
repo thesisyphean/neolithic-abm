@@ -11,14 +11,17 @@ def main():
     for file_or_dir in files_and_dirs:
         path = "results/" + file_or_dir
         if os.path.isdir(path):
-            plot_folder(path)
+            plot_folder(path, file_or_dir)
 
-def plot_folder(path):
+def plot_folder(path, title):
     data = read_dataframe(path)
 
-    # TODO: annot and fmt
-    sns.heatmap(data=data, x="f", y="d", annot=True, cmap="YlGnBu")
-    # TODO: clf and savefig, title, etc.
+    plt.clf()
+    data = data.pivot(index="f", columns="d", values="Egalitarianism")
+    sns.heatmap(data=data, cmap="YlGnBu")
+    plt.title(title)
+    plt.savefig(f"plots/{title}.png", dpi=300)
+    print("Completed!")
 
 def read_dataframe(path):
     dataframes = []
@@ -27,9 +30,9 @@ def read_dataframe(path):
         path += "/" + file
         if os.path.isfile(path):
             data = pd.read_csv(path).tail(1)
-            # TODO:
-            data["f"] =
-            data["d"] =
+            parts = file.split(".")[0].split("_")
+            data["f"] = int(parts[2])
+            data["d"] = int(parts[4])
             dataframes.append(data)
 
     return pd.concat(dataframes)
