@@ -90,10 +90,10 @@ fn generate_settings() -> Vec<Settings> {
         let folder = format!("results/{}", genes);
         fs::create_dir(&folder).unwrap();
 
-        for f in 0..8 {
-            for d in 0..10 {
-                let f_final = 2.0f64.powi(f);
-                let degradation = 0.1 * d as f64;
+        for f in 1..=12 {
+            for d in 0..30 {
+                let f_final = 1.587f64.powi(f);
+                let degradation = 0.03 * d as f64;
 
                 let title = format!("{}_f_{}_d_{}", genes, f, d);
                 let path = format!("{}/{}.csv", folder, title);
@@ -123,6 +123,7 @@ fn run(settings: Settings) -> Result<(), RunError> {
         ])
         .map_err(RunError::CSVError)?;
 
+    // TODO: take averages of three different worlds
     let mut world = World::new(settings);
     for i in 0..ITERATIONS {
         let (peer, subordinate) = world.cooperation();
