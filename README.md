@@ -2,7 +2,7 @@
 
 ## ⚠️ Warning ⚠️
 
-This project is extremely WIP! There are some serious rough patches in many parts of the code. These patches will be smoothed over and this warning will (hopefully) be removed in the December holidays.
+This project is extremely WIP! There are some serious rough patches in many parts of the code. These patches will be smoothed over and this warning will (hopefully) be removed in November / December holidays. Documentation will follow soon after the primary fixes.
 
 ## About
 
