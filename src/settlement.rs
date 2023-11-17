@@ -1,28 +1,39 @@
-use crate::GeneSettings;
-use crate::household::{Household, Genes, QueryType};
+use crate::household::{Genes, Household, QueryType};
 use crate::world::Index;
+use crate::GeneSettings;
 use rand::{rngs::ThreadRng, Rng};
 
 pub struct Settlement {
-    pub id: u32, // used for marking land in the matrix
+    pub id: u32,         // used for marking land in the matrix
     pub position: Index, // position in the matrix
     pub households: Vec<Household>,
 }
 
 impl Settlement {
-    pub fn new(id: u32, position: Index, initial_households: usize, initial_genes: GeneSettings) -> Self {
+    pub fn new(
+        id: u32,
+        position: Index,
+        initial_households: usize,
+        initial_genes: GeneSettings,
+    ) -> Self {
         let households = (0..initial_households)
             .map(|n| {
-                Household::new(n as u32, match initial_genes {
-                    GeneSettings::Altruistic => Genes::altruistic(),
-                    GeneSettings::Defective => Genes::defective(),
-                    GeneSettings::Split => if n % 2 == 0 {
-                        Genes::altruistic()
-                    } else {
-                        Genes::defective()
-                    }
-                })
-            }).collect();
+                Household::new(
+                    n as u32,
+                    match initial_genes {
+                        GeneSettings::Altruistic => Genes::altruistic(),
+                        GeneSettings::Defective => Genes::defective(),
+                        GeneSettings::Split => {
+                            if n % 2 == 0 {
+                                Genes::altruistic()
+                            } else {
+                                Genes::defective()
+                            }
+                        }
+                    },
+                )
+            })
+            .collect();
 
         Settlement {
             id,
@@ -31,8 +42,7 @@ impl Settlement {
         }
     }
 
-    pub fn query_donations(&mut self, i: usize, required: f64,
-        rng: &mut ThreadRng) -> bool {
+    pub fn query_donations(&mut self, i: usize, required: f64, rng: &mut ThreadRng) -> bool {
         let status = self.households[i].status();
 
         // check with superiors first
@@ -66,12 +76,12 @@ impl Settlement {
     }
 
     pub fn influence(&self, other: &Self) -> f64 {
-        other.status().powf(crate::beta) -
-            crate::m * self.position.dist(other.position)
+        other.status().powf(crate::beta) - crate::m * self.position.dist(other.position)
     }
 
     pub fn status(&self) -> f64 {
-        self.households.iter()
+        self.households
+            .iter()
             // TODO: shouldn't this be resources as well?
             .map(|h| h.load)
             .sum()
@@ -79,9 +89,7 @@ impl Settlement {
 
     // one call of this method invalidates positions, so we need to use ids
     pub fn remove(&mut self, id: u32) -> Household {
-        let i = self.households.iter()
-            .position(|h| h.id == id)
-            .unwrap();
+        let i = self.households.iter().position(|h| h.id == id).unwrap();
 
         self.households.swap_remove(i)
     }
@@ -96,15 +104,11 @@ impl Settlement {
     }
 
     fn max_id(&self) -> u32 {
-        self.households.iter()
-            .map(|h| h.id)
-            .max().unwrap_or(0)
+        self.households.iter().map(|h| h.id).max().unwrap_or(0)
     }
 
     fn pos(&self, id: u32) -> usize {
-        self.households.iter()
-            .position(|h| h.id == id)
-            .unwrap()
+        self.households.iter().position(|h| h.id == id).unwrap()
     }
 
     pub fn find_genes(&self, mut status: f64) -> Genes {
@@ -123,35 +127,51 @@ impl Settlement {
         self.households.len()
     }
 
+    pub fn patches(&self) -> usize {
+        self.households
+            .iter()
+            .filter(|h| h.resource_patch.is_some())
+            .count()
+    }
+
     pub fn average_cooperation(&self) -> f64 {
-        self.households.iter()
+        self.households
+            .iter()
             .map(|h| h.genes.cooperation())
-            .sum::<f64>() / self.population() as f64
+            .sum::<f64>()
+            / self.population() as f64
     }
 
     pub fn cooperation(&self) -> (f64, f64) {
-        let coop_sum = self.households.iter()
-            .fold((0.0, 0.0), |a, h|
-                (a.0 + h.genes.peer_transfer, a.1 + h.genes.subordinate_transfer));
+        let coop_sum = self.households.iter().fold((0.0, 0.0), |a, h| {
+            (
+                a.0 + h.genes.peer_transfer,
+                a.1 + h.genes.subordinate_transfer,
+            )
+        });
 
         let pop = self.population() as f64;
         (coop_sum.0 / pop, coop_sum.1 / pop)
     }
 
     pub fn statuses(&self) -> Vec<f64> {
-        self.households.iter()
-            .map(|h| h.status())
-            .collect()
+        self.households.iter().map(|h| h.status()).collect()
     }
 
     pub fn average_resources(&self) -> f64 {
-        self.households.iter()
+        self.households.iter().map(|h| h.resources).sum::<f64>() / self.population() as f64
+    }
+
+    pub fn max_resources(&self) -> f64 {
+        self.households
+            .iter()
             .map(|h| h.resources)
-            .sum::<f64>() / self.population() as f64
+            .fold(0. / 0., f64::max)
     }
 
     pub fn max_load(&self) -> f64 {
-        self.households.iter()
+        self.households
+            .iter()
             .map(|h| h.load)
             .fold(0.0 / 0.0, f64::max)
     }

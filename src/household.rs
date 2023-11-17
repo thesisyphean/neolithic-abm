@@ -1,5 +1,4 @@
 use crate::world::Index;
-use std::fmt::{self, Display};
 
 // TODO: move other constants here
 const CONSUMPTION: f64 = 0.5;
@@ -49,9 +48,7 @@ impl Household {
         // TODO: update satisfaction
     }
 
-    pub fn query_donation(&mut self, required: f64, query_type: QueryType,
-        chance: f64) -> bool {
-
+    pub fn query_donation(&mut self, required: f64, query_type: QueryType, chance: f64) -> bool {
         // don't have the resources to donate
         if required > self.resources {
             return false;
@@ -94,21 +91,15 @@ impl Household {
 
     // these three methods were pulled from cnc
     pub fn is_peer(&self, other_status: f64) -> bool {
-        (other_status - self.status()).abs() /
-            f64::max(self.status(), other_status)
-            <= L
+        (other_status - self.status()).abs() / f64::max(self.status(), other_status) <= L
     }
 
     pub fn is_auth(&self, other_status: f64) -> bool {
-        (other_status - self.status()) /
-            f64::max(self.status(), other_status)
-            > L
+        (other_status - self.status()) / f64::max(self.status(), other_status) > L
     }
 
     pub fn is_sub(&self, other_status: f64) -> bool {
-        (self.status() - other_status) /
-            f64::max(other_status, self.status())
-            > L
+        (self.status() - other_status) / f64::max(other_status, self.status()) > L
     }
 
     pub fn birth(&self, chance: f64) -> bool {
@@ -144,7 +135,7 @@ impl Household {
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Genes {
-    pub peer_transfer: f64, // likelihood of contributing to peers
+    pub peer_transfer: f64,        // likelihood of contributing to peers
     pub subordinate_transfer: f64, // ditto for subordinates
 }
 
@@ -172,11 +163,7 @@ impl Genes {
     }
 
     fn random_choice(first: f64, second: f64) -> f64 {
-        let mut new_gene = if rand::random() {
-            first
-        } else {
-            second
-        };
+        let mut new_gene = if rand::random() { first } else { second };
 
         if rand::random::<f64>() < MUTATION_FREQ {
             new_gene += MUTATION_AMPL * (rand::random::<f64>() * 2.0 - 1.0)

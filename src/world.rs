@@ -1,6 +1,6 @@
-use crate::{Settings, settlement::Settlement};
+use crate::{settlement::Settlement, Settings};
+use rand::{rngs::ThreadRng, thread_rng, Rng, RngCore};
 use std::{collections::VecDeque, f64::consts::PI};
-use rand::{rngs::ThreadRng, Rng, RngCore, thread_rng};
 
 pub struct World {
     settings: Settings,
@@ -16,9 +16,7 @@ impl World {
 
         // create the matrix with all unclaimed cells
         let mut matrix: Vec<Vec<_>> = (0..crate::SIZE)
-            .map(|_| (0..crate::SIZE)
-                .map(|_| Cell::Unclaimed)
-                .collect())
+            .map(|_| (0..crate::SIZE).map(|_| Cell::Unclaimed).collect())
             .collect();
 
         let mut settlements = Vec::new();
@@ -35,9 +33,12 @@ impl World {
                     if let Cell::Unclaimed = matrix[i][j] {
                         if new_index == 0 {
                             // create and place the settlement
-                            let settlement = Settlement::new(n as u32,
-                                Index(i, j), crate::HOUSHOLDS,
-                                settings.genes);
+                            let settlement = Settlement::new(
+                                n as u32,
+                                Index(i, j),
+                                crate::HOUSHOLDS,
+                                settings.genes,
+                            );
                             settlements.push(settlement);
                             matrix[i][j] = Cell::Settled(n as u32);
 
@@ -61,7 +62,6 @@ impl World {
 
     pub fn iterate(&mut self) {
         // agents without a resource patch try to claim one
-        // TODO: Is this even vaguely valid?
         if self.count_population() < crate::SIZE.pow(2) {
             self.iterate_settlement();
         }
@@ -69,8 +69,15 @@ impl World {
         // agents consume and request resources
         self.iterate_consumption();
 
+        // TODO:
         // agents reproduce based on their hunger
-        self.iterate_birth();
+        // self.iterate_birth();
+
+        // this is a check to ensure that free riders
+        //  are not affecting the results
+        if self.count_population() < crate::SIZE.pow(2) {
+            self.iterate_birth();
+        }
 
         // agents die based on their hunger
         self.iterate_death();
@@ -87,9 +94,7 @@ impl World {
     fn iterate_settlement(&mut self) {
         // each vector holds the indices of the households in that settlement
         //   that don't have a resource patch
-        let mut to_search: Vec<_> = (0..self.settlements.len())
-            .map(|_| Vec::new())
-            .collect();
+        let mut to_search: Vec<_> = (0..self.settlements.len()).map(|_| Vec::new()).collect();
 
         for (n, settlement) in self.settlements.iter().enumerate() {
             for (i, household) in settlement.households.iter().enumerate() {
@@ -128,7 +133,10 @@ impl World {
             for (i, household) in settlement.households.iter_mut().enumerate() {
                 // if a houshold has a resource patch, they gather resources from it
                 household.provide(if household.resource_patch.is_some() {
-                    Self::resources(self.iteration, self.settings.f) } else { 0.0 });
+                    Self::resources(self.iteration, self.settings.f)
+                } else {
+                    0.0
+                });
 
                 // the household returns how much they need
                 let required = household.required();
@@ -152,12 +160,12 @@ impl World {
     }
 
     fn iterate_birth(&mut self) {
-        let mut births: Vec<_> = (0..self.settlements.len())
-            .map(|_| Vec::new())
-            .collect();
+        let mut births: Vec<_> = (0..self.settlements.len()).map(|_| Vec::new()).collect();
 
         for (n, settlement) in self.settlements.iter().enumerate() {
-            let total_statuses = self.settlements.iter()
+            let total_statuses = self
+                .settlements
+                .iter()
                 .filter(|s| settlement.influence(s) > 0.0)
                 .map(|s| s.status())
                 .sum::<f64>() as u32;
@@ -172,7 +180,9 @@ impl World {
                         let mut genes = household.genes;
 
                         for s in &self.settlements {
-                            if settlement.influence(s) <= 0.0 { continue; }
+                            if settlement.influence(s) <= 0.0 {
+                                continue;
+                            }
 
                             if chosen <= settlement.status() {
                                 genes = settlement.find_genes(chosen);
@@ -199,14 +209,17 @@ impl World {
         let mut settlements_to_remove = Vec::new();
 
         for settlement in &mut self.settlements {
-            let to_remove: Vec<_> = settlement.households.iter()
+            let to_remove: Vec<_> = settlement
+                .households
+                .iter()
                 .filter(|h| h.death(self.rng.gen()))
                 .map(|h| h.id)
                 .collect();
 
-            let removed = settlement.households.extract_if(|h|
-                to_remove.contains(&h.id));
-            
+            let removed = settlement
+                .households
+                .extract_if(|h| to_remove.contains(&h.id));
+
             for household in removed {
                 if let Some(pos) = household.resource_patch {
                     self.matrix[pos.0][pos.1] = Cell::Unclaimed;
@@ -219,7 +232,9 @@ impl World {
         }
 
         for settlement_id in settlements_to_remove {
-            let position = self.settlements.iter()
+            let position = self
+                .settlements
+                .iter()
                 .position(|s| s.id == settlement_id)
                 .unwrap();
 
@@ -269,7 +284,8 @@ impl World {
             // otherwise we are trespassing
             if let Cell::Claimed(cid) = cell {
                 if *cid == id {
-                    let mut surroundings = VecDeque::from(current_pos.surroundings(crate::SIZE as isize));
+                    let mut surroundings =
+                        VecDeque::from(current_pos.surroundings(crate::SIZE as isize));
                     to_search.append(&mut surroundings);
                 }
             }
@@ -287,36 +303,49 @@ impl World {
     }
 
     pub fn count_population(&self) -> usize {
-        self.settlements.iter()
-            .map(|s| s.population())
-            .sum()
+        self.settlements.iter().map(|s| s.population()).sum()
+    }
+
+    pub fn count_patches(&self) -> usize {
+        self.settlements.iter().map(|s| s.patches()).sum()
     }
 
     pub fn average_cooperation(&self) -> f64 {
-        self.settlements.iter()
+        self.settlements
+            .iter()
             .map(|s| s.average_cooperation())
-            .sum::<f64>() / self.count_settlements() as f64
+            .sum::<f64>()
+            / self.count_settlements() as f64
     }
 
     pub fn cooperation(&self) -> (f64, f64) {
-        let transfer = self.settlements.iter()
-            .fold((0.0, 0.0), |a, s| {
-                let coop = s.cooperation();
-                (a.0 + coop.0, a.1 + coop.1)
-            });
-        
-        let set= self.count_settlements() as f64;
+        let transfer = self.settlements.iter().fold((0.0, 0.0), |a, s| {
+            let coop = s.cooperation();
+            (a.0 + coop.0, a.1 + coop.1)
+        });
+
+        let set = self.count_settlements() as f64;
         (transfer.0 / set, transfer.1 / set)
     }
 
     pub fn average_resources(&self) -> f64 {
-        self.settlements.iter()
+        self.settlements
+            .iter()
             .map(|s| s.average_resources())
-            .sum::<f64>() / self.count_settlements() as f64
+            .sum::<f64>()
+            / self.count_settlements() as f64
+    }
+
+    pub fn max_resources(&self) -> f64 {
+        self.settlements
+            .iter()
+            .map(|s| s.max_resources())
+            .fold(0. / 0., f64::max)
     }
 
     pub fn max_load(&self) -> f64 {
-        self.settlements.iter()
+        self.settlements
+            .iter()
             .map(|s| s.max_load())
             .fold(0.0 / 0.0, f64::max)
     }
@@ -324,13 +353,17 @@ impl World {
     /// Calculates the Gini coefficient of the statuses of all households
     pub fn gini_coefficient(&self) -> f64 {
         // combine all statuses into a single vector
-        let statuses = self.settlements.iter()
-            .map(|s| s.statuses())
-            .fold(Vec::new(), |mut a, mut e| { a.append(&mut e); a });
+        let statuses =
+            self.settlements
+                .iter()
+                .map(|s| s.statuses())
+                .fold(Vec::new(), |mut a, mut e| {
+                    a.append(&mut e);
+                    a
+                });
         let len = statuses.len() as f64;
 
-        let mean = statuses.iter()
-            .sum::<f64>() / len;
+        let mean = statuses.iter().sum::<f64>() / len;
 
         // mad is the sum of the absolute difference between all possible pairs
         let mut mean_absolute_difference = 0.0;
@@ -369,8 +402,7 @@ impl Index {
 
         dirs.into_iter()
             .map(|d| ((self.0 as isize) + d.0, (self.1 as isize) + d.1))
-            .filter(|s| s.0 >= 0 && s.0 < size &&
-                s.1 >= 0 && s.1 < size)
+            .filter(|s| s.0 >= 0 && s.0 < size && s.1 >= 0 && s.1 < size)
             .map(|s| Index(s.0 as usize, s.1 as usize))
             .collect()
     }
