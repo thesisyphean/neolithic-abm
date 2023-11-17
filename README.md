@@ -1,6 +1,6 @@
 # NeoCOOP
 
-## Warning
+## ⚠️ Warning ⚠️
 
 This project is extremely WIP! There are some serious rough patches in many parts of the code. These patches will be smoothed over and this warning will (hopefully) be removed in the December holidays.
 
@@ -11,3 +11,5 @@ This is a rust port of an agent-based model by [Brandon Gower-Winter](https://gi
 ## Visualisation
 
 A visualisation of a simulation is available in the root of the project, called `visual.gif`.
+
+![Pixel visualisation](https://github.com/thesisyphean/neo/blob/main/visual.gif)
