@@ -16,7 +16,6 @@ def animate(i):
     iteration = i * 100
     row = dataframe.iloc[iteration]
     cooperation = (row["PeerTransfer"] + row["SubTransfer"]) / 2
-    cooperation = 0.5 + (cooperation - 0.5) / 2
 
     x.append(iteration)
     y.append(cooperation)
