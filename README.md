@@ -9,3 +9,5 @@ This is a rust port of an agent-based model by [Brandon Gower-Winter](https://gi
 A visualisation of a simulation is available in the root of the project, called `visual.gif`.
 
 ![Pixel visualisation](https://github.com/thesisyphean/neo/blob/main/visual.gif)
+
+The research paper based on this project can be found in the repository as `paper.pdf`.
