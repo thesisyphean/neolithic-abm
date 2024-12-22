@@ -51,6 +51,6 @@ The program needs a `results` folder, but the `--purge-results` flag creates one
 
 ### Results
 
-The results produced are a collection of `.csv` files that store information about each iteration. This includes the number of settlements, the number of family units, the average and max resources belonging to a single family unit, measures of cooperation in the world, and measures of egalitarianism (the Gini coefficient) in the world. The simulations can be run with debug resolution (which is the default) and the results can be viewed in the plotting notebook for a better understanding of the data.\
+The results produced are a collection of `.csv` files that store information about each iteration. This includes the number of settlements, the number of family units, the average and max resources belonging to a single family unit, measures of cooperation in the world, and measures of egalitarianism (the Gini coefficient) in the world. The simulations can be run with debug resolution (which is the default) and the results can be viewed in the plotting notebook for a better understanding of the data.
 
 The results can be plotted using the [plot.ipynb](plot.ipynb) Jupyter notebook interactively, and a gif showing the evolution of different values over time can be created using [plot_gif.py](plot_gif.py).
