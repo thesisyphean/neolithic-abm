@@ -1,6 +1,5 @@
+#![allow(warnings)]
 #![feature(extract_if)]
-
-const VISUAL: bool = false;
 
 mod household;
 mod settlement;
@@ -11,6 +10,7 @@ use crate::visualiser::Visualiser;
 use crate::world::World;
 use csv::Writer;
 use rayon::prelude::*;
+use clap::Parser;
 use std::fmt::Display;
 use std::fs;
 
@@ -23,7 +23,7 @@ const ITERATIONS: u32 = 10000;
 const BIRTH_RATE: f64 = 0.015;
 const DEATH_RATE: f64 = 0.01;
 
-// TODO: These aren't used
+// TODO: These aren't used at the moment
 const years_per_move: u32 = 100;
 const beta: f64 = 1.5;
 const m: f64 = 0.005;
@@ -45,13 +45,13 @@ impl Settings {
             degradation,
             title,
             path,
-            genes: genes,
+            genes,
         }
     }
 }
 
 #[derive(Clone, Copy)]
-enum GeneSettings {
+pub enum GeneSettings {
     Altruistic,
     Defective,
     Split,
@@ -71,8 +71,27 @@ impl Display for GeneSettings {
     }
 }
 
+/// An agent-based model of Neolithic hunter-gatherers
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Whether to visualise a simulation and ignore other arguments
+    #[arg(short, long, default_value_t = false)]
+    visualise: bool,
+
+    /// Whether to increase the granularity of the data with increased iterations 
+    #[arg(short, long, default_value_t = false)]
+    release_resolution: bool,
+
+    /// Whether to purge previous results
+    #[arg(short, long, default_value_t = false)]
+    purge_results: bool,
+}
+
 fn main() {
-    if VISUAL {
+    let args = Args::parse();
+
+    if args.visualise {
         visualise(Settings::new(
             256.0,
             0.25,
@@ -81,7 +100,7 @@ fn main() {
             GeneSettings::Altruistic,
         ));
     } else {
-        let settings = generate_settings();
+        let settings = generate_settings(args.release_resolution, args.purge_results);
         let results: Vec<_> = settings.into_par_iter().map(run).collect();
 
         for result in results {
@@ -96,19 +115,13 @@ fn main() {
     }
 }
 
-fn generate_settings() -> Vec<Settings> {
+fn generate_settings(release: bool, purge: bool) -> Vec<Settings> {
     let mut settings = vec![];
-    /* let mut settings = vec![Settings::new(
-        4.0,
-        0.25,
-        String::from("S_f_2_d_5"),
-        String::from("results/S_f_2_d_5.csv"),
-        GeneSettings::Split,
-    )]; */
 
-    // purge any previous results
-    // fs::remove_dir_all("results").unwrap();
-    // fs::create_dir("results").unwrap();
+    if purge {
+        fs::remove_dir_all("results").unwrap();
+        fs::create_dir("results").unwrap();
+    }
 
     for genes in [
         GeneSettings::Split,
@@ -119,30 +132,33 @@ fn generate_settings() -> Vec<Settings> {
         fs::create_dir(&folder).unwrap();
 
         // Debug resolution
-        for f in 1..=5 {
-            for d in 0..5 {
-                let f_final = 2.0f64.powi(f);
-                let degradation = 0.2 * d as f64;
+        if !release {
+            for f in 1..=5 {
+                for d in 0..5 {
+                    let f_final = 2.0f64.powi(f);
+                    let degradation = 0.2 * d as f64;
 
-                let title = format!("{}_f_{}_d_{}", genes, f, d);
-                let path = format!("{}/{}.csv", folder, title);
+                    let title = format!("{}_f_{}_d_{}", genes, f, d);
+                    let path = format!("{}/{}.csv", folder, title);
 
-                settings.push(Settings::new(f_final, degradation, title, path, genes));
+                    settings.push(Settings::new(f_final, degradation, title, path, genes));
+                }
             }
         }
 
-        /* Release resolution
-        for f in 1..=12 {
-            for d in 0..20 {
-                let f_final = 1.587f64.powi(f);
-                let degradation = 0.05 * d as f64;
+        else {
+            for f in 1..=12 {
+                for d in 0..20 {
+                    let f_final = 1.587f64.powi(f);
+                    let degradation = 0.05 * d as f64;
 
-                let title = format!("{}_f_{}_d_{}", genes, f, d);
-                let path = format!("{}/{}.csv", folder, title);
+                    let title = format!("{}_f_{}_d_{}", genes, f, d);
+                    let path = format!("{}/{}.csv", folder, title);
 
-                settings.push(Settings::new(f_final, degradation, title, path, genes));
+                    settings.push(Settings::new(f_final, degradation, title, path, genes));
+                }
             }
-        } */
+        }
     }
 
     settings
