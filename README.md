@@ -14,19 +14,19 @@ Explanations for the terminology used to describe these visualisations can be fo
 
 ![Pixel visualisation](visual.gif)
 
-The black pixels are settlements, the grey pixels are claimed areas of land that the settlements use to produce resources and the white pixels are unclaimed areas of land.
+This gif shows a grid world inhabited by different Neolithic settlements, made up of different family units. The black pixels are settlements, the grey pixels are claimed areas of land that the settlements use to produce resources and the white pixels are unclaimed areas of land.
 
 ### Cooperation
 
 ![Visualisation of cooperation in the world changing over time](cooperation.gif)
 
-This is a visualisation of the average cooperation in a world against time, measured in iterations of the simulation. This is how likely the average family unit is to share resources with another family unit.
+This is a visualisation of the average cooperation in a world, ranging from 0 to 1 with 0 being no chance of cooperation and 1 being surety of cooperation, against time, measured in iterations of the simulation. This is how likely the average family unit is to share resources with another family unit.
 
 ### Egalitarianism
 
 ![Egalitarianism in a world](plots/egalitarianism/D_egal.png)
 
-This shows the average level of egalitarianism, measured using the Gini coefficient, reached at the end of a simulation depending on the resource degradation rate and the stress scenario.
+This shows the average level of egalitarianism, measured using the Gini coefficient, reached at the end of a simulation depending on the resource degradation rate and the stress scenario. The Gini coefficient gives an approximation of how equally resources are distributed, ranging from 0 to 1 with 0 meaning perfect equality and 1 meaning perfect inequality.
 
 ## Usage
 
